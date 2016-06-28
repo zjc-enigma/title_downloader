@@ -52,8 +52,7 @@ if __name__ == "__main__":
     domain_regex = r"^(http|https)://[^/=?]*(sina.com|sohu.com|163.com|ifeng.com)"
 
     #domain_regex =  r"^(http|https)://"
-    urls = [ urllib2.unquote(json.loads(domain_item)['prev_url'].strip()) for domain_item in domain_list.readlines() ]
-    url_generator = ( url for url in urls if re.search(domain_regex, url) )
+    url_generator = ( urllib2.unquote(json.loads(domain_item)['prev_url'].strip()) for domain_item in domain_list.readlines() )
 
     res_title = []
     while True:
@@ -61,6 +60,8 @@ if __name__ == "__main__":
             start_urls = []
             for i in range(1000000):
                 start_urls.append(url_generator.next())
+
+            start_urls = [ url for url in start_urls if re.search(domain_regex, url) ]
 
             res = multi_thread(get_title_from_url, start_urls, 32)
             tmp = [title for title in res if title != ""]
