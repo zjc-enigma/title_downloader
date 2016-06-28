@@ -47,12 +47,14 @@ def get_title_from_url(url):
         return ""
 
 
+
+
 if __name__ == "__main__":
     domain_list = open('../data/part-100to199')
     domain_regex = r"^(http|https)://[^/=?]*(sina.com|sohu.com|163.com|ifeng.com)"
 
     #domain_regex =  r"^(http|https)://"
-    url_generator = ( urllib2.unquote(json.loads(domain_item)['prev_url'].strip()) for domain_item in domain_list.readlines() )
+    url_generator = ( urllib2.unquote(json.loads(domain_item)['prev_url'].strip()) for domain_item in domain_list )
 
     res_title = []
     while True:
