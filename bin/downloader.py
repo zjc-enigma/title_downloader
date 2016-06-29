@@ -53,10 +53,12 @@ if __name__ == "__main__":
     domain_list = open('../data/part-00001')
     #domain_regex = r"^(http|https)://[^/=?]*(sina.com|sohu.com|163.com|ifeng.com)"
 
-    crawl_scale = 1000
+    crawl_scale = 320
     domain_regex =  r"^(http|https)://"
     url_generator = ( urllib2.unquote(json.loads(domain_item)['prev_url'].strip()) for domain_item in domain_list )
-
+    thread_num = 32
+    p = Pool(thread_num)
+    job_handler = partial(get_title_from_url)
     res_title = []
     while True:
         try:
@@ -70,7 +72,8 @@ if __name__ == "__main__":
 
         finally:
             start_urls = [ url for url in start_urls if re.search(domain_regex, url) ]
-            res = multi_thread(get_title_from_url, start_urls, 32)
+            #res = multi_thread(get_title_from_url, start_urls, 32)
+            res = p.map(job_handler, start_urls)
             tmp = [title for title in res if title != ""]
             res_title = list(set(res_title + tmp))
 
@@ -82,3 +85,5 @@ if __name__ == "__main__":
         wfd.write(title + "\n")
     wfd.close()
     domain_list.close()
+    p.close()
+    p.terminate()
