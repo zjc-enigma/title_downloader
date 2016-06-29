@@ -40,7 +40,7 @@ def get_title_from_url(url):
         print "GET TITLE"
         # TODO: body extraction will got a lot of html tags , this is bad
         #return json.dumps({"title":title, "body":body, "url":url})
-        return title
+        return json.dumps({"url": url, "title": title})
 
     except Exception, e:
         print "NONE TITLE"
@@ -50,31 +50,33 @@ def get_title_from_url(url):
 
 
 if __name__ == "__main__":
-    domain_list = open('../data/part-100to199')
-    domain_regex = r"^(http|https)://[^/=?]*(sina.com|sohu.com|163.com|ifeng.com)"
+    domain_list = open('../data/part-00001')
+    #domain_regex = r"^(http|https)://[^/=?]*(sina.com|sohu.com|163.com|ifeng.com)"
 
-    #domain_regex =  r"^(http|https)://"
+    crawl_scale = 1000
+    domain_regex =  r"^(http|https)://"
     url_generator = ( urllib2.unquote(json.loads(domain_item)['prev_url'].strip()) for domain_item in domain_list )
 
     res_title = []
     while True:
         try:
             start_urls = []
-            for i in range(1000000):
+            for i in range(crawl_scale):
                 start_urls.append(url_generator.next())
 
-            start_urls = [ url for url in start_urls if re.search(domain_regex, url) ]
-
-            res = multi_thread(get_title_from_url, start_urls, 32)
-            tmp = [title for title in res if title != ""]
-            res_title = list(set(res_title + tmp))
-
-        # TODO: figure out generator exception
         except Exception, e:
             print "reach the end of file"
             break
 
-    res_file = "../data/crawled_titles-100to199"
+        finally:
+            start_urls = [ url for url in start_urls if re.search(domain_regex, url) ]
+            res = multi_thread(get_title_from_url, start_urls, 32)
+            tmp = [title for title in res if title != ""]
+            res_title = list(set(res_title + tmp))
+
+
+    #res_file = "../data/crawled_titles-100to199"
+    res_file = "../data/all_titles-00001"
     wfd = open(res_file, 'w')
     for title in res_title:
         wfd.write(title + "\n")
