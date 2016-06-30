@@ -3,15 +3,17 @@ import sys
 #import pandas as pd
 import json
 import re
+import time
 from functools import partial
 from multiprocessing.pool import Pool
+from multiprocessing import Queue
 import urllib2
 import urlparse
 from bs4 import BeautifulSoup
 sys.path.append("..")
 from utils import myutils
 myutils.set_ipython_encoding_utf8()
-
+begin = False
 
 def multi_thread(handler, job_list, thread_num):
     p = Pool(thread_num)
@@ -37,53 +39,79 @@ def get_title_from_url(url):
         title = content.title.get_text()
         body = content.body.get_text()
 
-        print "GET TITLE"
+        print "GET TITLE %s " % title
         # TODO: body extraction will got a lot of html tags , this is bad
         #return json.dumps({"title":title, "body":body, "url":url})
-        return json.dumps({"url": url, "title": title})
+        #return {"url": url, "title": title}
+        return title
 
     except Exception, e:
-        print "NONE TITLE"
+        print "NONE TITLE %s " % url
         return ""
 
 
+def get_title_from_url_queue(queue, output_queue):
+
+    while True:
+        if queue.empty() and begin:
+            break
+
+        else:
+            url = queue.get(True)
+            ret = get_title_from_url(url)
+            if ret:
+                output_queue.put(json.dumps(ret))
 
 
 if __name__ == "__main__":
-    domain_list = open('../data/part-00001')
+    domain_list = open('../data/part-00002')
     #domain_regex = r"^(http|https)://[^/=?]*(sina.com|sohu.com|163.com|ifeng.com)"
 
-    crawl_scale = 320
+    crawl_scale = 53227135
     domain_regex =  r"^(http|https)://"
     pv_thresh = 15
     uv_thresh = 5
 
-    url_generator = ( urllib2.unquote(json.loads(domain_item)['prev_url'].strip()) for domain_item in domain_list if json.loads(domain_item)['prev_uv'] > uv_thresh and json.loads(domain_item)['prev_pv'] > pv_thresh)
+    url_generator = ( urllib2.unquote(json.loads(domain_item)['prev_url'].strip()) for domain_item in domain_list if json.loads(domain_item)['prev_uv'] >= uv_thresh and json.loads(domain_item)['prev_pv'] >= pv_thresh)
 
-    thread_num = 32
-    p = Pool(thread_num)
+    the_queue = Queue(maxsize=5120)
+    output_queue = Queue()
+    thread_num = 512
+    p = Pool(thread_num, get_title_from_url_queue, (the_queue, output_queue))
     job_handler = partial(get_title_from_url)
     res_title = []
+    index = 1
+
     while True:
+        if not begin:
+            begin = True
+
         try:
-            start_urls = []
-            for i in range(crawl_scale):
-                start_urls.append(url_generator.next())
+            url = url_generator.next()
+            if re.search(domain_regex, url):
+                print ("number : %d url is processing" % index)
+                the_queue.put(url)
+                index += 1
+
+            else:
+                continue
+
 
         except Exception, e:
             print "reach the end of file"
             break
 
-        finally:
-            start_urls = [ url for url in start_urls if re.search(domain_regex, url) ]
+        #finally:
+            #start_urls = [ url for url in start_urls if re.search(domain_regex, url) ]
             #res = multi_thread(get_title_from_url, start_urls, 32)
-            res = p.map(job_handler, start_urls)
-            tmp = [title for title in res if title != ""]
-            res_title = list(set(res_title + tmp))
+            #res = p.map(job_handler, start_urls)
+            #tmp = [title for title in res if title != ""]
+            #res_title = list(set(res_title + tmp))
 
 
     #res_file = "../data/crawled_titles-100to199"
-    res_file = "../data/all_titles-00001"
+    res_title = list(set([title for title in output_queue]))
+    res_file = "../data/thresh_titles-00002"
     wfd = open(res_file, 'w')
     for title in res_title:
         wfd.write(title + "\n")
