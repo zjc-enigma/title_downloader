@@ -55,7 +55,11 @@ if __name__ == "__main__":
 
     crawl_scale = 320
     domain_regex =  r"^(http|https)://"
-    url_generator = ( urllib2.unquote(json.loads(domain_item)['prev_url'].strip()) for domain_item in domain_list )
+    pv_thresh = 15
+    uv_thresh = 5
+
+    url_generator = ( urllib2.unquote(json.loads(domain_item)['prev_url'].strip()) for domain_item in domain_list if json.loads(domain_item)['prev_uv'] > uv_thresh and json.loads(domain_item)['prev_pv'] > pv_thresh)
+
     thread_num = 32
     p = Pool(thread_num)
     job_handler = partial(get_title_from_url)
