@@ -53,14 +53,10 @@ def get_title_from_url(url):
 def get_title_from_url_queue(queue, output_queue):
 
     while True:
-        if queue.empty() and begin:
-            break
-
-        else:
-            url = queue.get(True)
-            ret = get_title_from_url(url)
-            if ret:
-                output_queue.put(json.dumps(ret))
+        aim_url = queue.get(True)
+        ret = get_title_from_url(aim_url)
+        if ret:
+            output_queue.put(json.dumps(ret))
 
 
 if __name__ == "__main__":
@@ -83,9 +79,6 @@ if __name__ == "__main__":
     index = 1
 
     while True:
-        if not begin:
-            begin = True
-
         try:
             url = url_generator.next()
             if re.search(domain_regex, url):
