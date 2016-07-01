@@ -14,6 +14,7 @@ sys.path.append("..")
 from utils import myutils
 myutils.set_ipython_encoding_utf8()
 begin = False
+POISON_PILL = "END_PROCESSING"
 
 def multi_thread(handler, job_list, thread_num):
     p = Pool(thread_num)
@@ -54,18 +55,26 @@ def get_title_from_url_queue(queue, output_queue):
 
     while True:
         aim_url = queue.get(True)
+        if aim_url == POISON_PILL:
+            break
+
         ret = get_title_from_url(aim_url)
         if ret:
             output_queue.put(ret.encode('utf8'))
 
+    queue.put(POISON_PILL)
+
 
 def write_to_disk(output_queue):
 
-    res_file = "../data/thresh_titles-00002"
+    res_file = "../data/thresh_titles-00003"
     wfd = open(res_file, 'w')
 
     while True:
         msg = output_queue.get(True)
+        if msg == POISON_PILL:
+            break
+
         if msg:
             wfd.write(msg + "\n")
 
@@ -73,7 +82,7 @@ def write_to_disk(output_queue):
 
 
 if __name__ == "__main__":
-    domain_list = open('../data/part-00002')
+    domain_list = open('../data/part-00003')
     #domain_regex = r"^(http|https)://[^/=?]*(sina.com|sohu.com|163.com|ifeng.com)"
 
     crawl_scale = 53227135
@@ -105,13 +114,13 @@ if __name__ == "__main__":
             else:
                 continue
 
-
         except StopIteration, e:
             print "reach the end of file"
+            the_queue.put(POISON_PILL)
             break
 
-        else:
-            print "other exception ocurr"
+        except Exception, err:
+            print "other exception ocurred %s"  % str(err)
             continue
 
     #while not the_queue.empty() or not output_queue.empty():
@@ -127,10 +136,14 @@ if __name__ == "__main__":
 
     #res_file = "../data/crawled_titles-100to199"
     #res_title = list(set([title for title in output_queue]))
+
+
     p.close()
     p.join()
+
+    output_queue.put(POISON_PILL)
+
     wp.close()
     wp.join()
     domain_list.close()
-    #p.terminate()
-    #wp.terminate()
+
