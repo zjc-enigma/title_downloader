@@ -56,7 +56,7 @@ def get_title_from_url_queue(queue, output_queue):
         aim_url = queue.get(True)
         ret = get_title_from_url(aim_url)
         if ret:
-            output_queue.put(json.dumps(ret))
+            output_queue.put(ret.encode('utf8'))
 
 
 def write_to_disk(output_queue):
@@ -65,15 +65,9 @@ def write_to_disk(output_queue):
     wfd = open(res_file, 'w')
 
     while True:
-        if output_queue.empty():
-            time.sleep(20)
-            if output_queue.empty():
-                break
-
-        else:
-            msg = output_queue.get(True)
-            if msg:
-                wfd.write(msg + "\n")
+        msg = output_queue.get(True)
+        if msg:
+            wfd.write(msg + "\n")
 
     wfd.close()
 
