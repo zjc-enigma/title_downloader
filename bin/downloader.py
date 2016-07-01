@@ -53,14 +53,34 @@ def get_title_from_url(url):
 def get_title_from_url_queue(queue, output_queue):
 
     while True:
-        if queue.empty() and begin:
-            break
+        if queue.empty():
+            time.sleep(20)
+            if queue.empty():
+                break
 
         else:
             url = queue.get(True)
             ret = get_title_from_url(url)
             if ret:
                 output_queue.put(json.dumps(ret))
+
+def write_to_disk(output_queue):
+
+    res_file = "../data/thresh_titles-00002"
+    wfd = open(res_file, 'w')
+
+    while True:
+        if output_queue.empty():
+            time.sleep(20)
+            if output_queue.empty():
+                break
+
+        else:
+            msg = output_queue.get(True)
+            if msg:
+                wfd.write(msg + "\n")
+
+    wfd.close()
 
 
 if __name__ == "__main__":
@@ -74,22 +94,22 @@ if __name__ == "__main__":
 
     url_generator = ( urllib2.unquote(json.loads(domain_item)['prev_url'].strip()) for domain_item in domain_list if json.loads(domain_item)['prev_uv'] >= uv_thresh and json.loads(domain_item)['prev_pv'] >= pv_thresh)
 
-    the_queue = Queue(maxsize=5120)
-    output_queue = Queue()
+    the_queue = Queue(maxsize=51200)
+    output_queue = Queue(maxsize=51200)
     thread_num = 512
-    p = Pool(thread_num, get_title_from_url_queue, (the_queue, output_queue))
-    job_handler = partial(get_title_from_url)
-    res_title = []
+
+    #job_handler = partial(get_title_from_url)
+    #res_title = []
     index = 1
+    p = Pool(thread_num, get_title_from_url_queue, (the_queue, output_queue))
+    wp = Pool(1, write_to_disk, (output_queue, ))
 
     while True:
-        if not begin:
-            begin = True
-
         try:
             url = url_generator.next()
             if re.search(domain_regex, url):
                 print ("number : %d url is processing" % index)
+                print ("queue size : %d " % the_queue.qsize())
                 the_queue.put(url)
                 index += 1
 
@@ -108,14 +128,11 @@ if __name__ == "__main__":
             #tmp = [title for title in res if title != ""]
             #res_title = list(set(res_title + tmp))
 
-
+    
     #res_file = "../data/crawled_titles-100to199"
-    res_title = list(set([title for title in output_queue]))
-    res_file = "../data/thresh_titles-00002"
-    wfd = open(res_file, 'w')
-    for title in res_title:
-        wfd.write(title + "\n")
-    wfd.close()
+    #res_title = list(set([title for title in output_queue]))
+
     domain_list.close()
     p.close()
     p.terminate()
+    wp.terminate()
