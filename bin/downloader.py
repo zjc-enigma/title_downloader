@@ -66,8 +66,8 @@ def get_title_from_url_queue(queue, output_queue):
 
 
 def write_to_disk(output_queue):
-
-    res_file = "../data/thresh_titles-00003"
+    title_id = {}
+    res_file = "../data/thresh_titles-100to199"
     wfd = open(res_file, 'w')
 
     while True:
@@ -75,19 +75,21 @@ def write_to_disk(output_queue):
         if msg == POISON_PILL:
             break
 
-        if msg:
+        # remove duplicates
+        if msg and hash(msg) not in title_id:
             wfd.write(msg + "\n")
+            title_id[hash(msg)] = 1
 
     wfd.close()
 
 
 if __name__ == "__main__":
-    domain_list = open('../data/part-00003')
+    domain_list = open('../data/part-100to199')
     #domain_regex = r"^(http|https)://[^/=?]*(sina.com|sohu.com|163.com|ifeng.com)"
 
     crawl_scale = 53227135
     domain_regex =  r"^(http|https)://"
-    pv_thresh = 15
+    pv_thresh = 14
     uv_thresh = 5
 
     url_generator = ( urllib2.unquote(json.loads(domain_item)['prev_url'].strip()) for domain_item in domain_list if json.loads(domain_item)['prev_uv'] >= uv_thresh and json.loads(domain_item)['prev_pv'] >= pv_thresh)
