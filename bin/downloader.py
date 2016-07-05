@@ -1,6 +1,7 @@
 #coding:utf-8
 import sys
 #import pandas as pd
+import thread
 import json
 import re
 import time
@@ -14,7 +15,7 @@ sys.path.append("..")
 from utils import myutils
 myutils.set_ipython_encoding_utf8()
 begin = False
-POISON_PILL = "END_PROCESSING"
+POISON_PILL = "POISON_END_PROCESSING"
 
 def multi_thread(handler, job_list, thread_num):
     p = Pool(thread_num)
@@ -67,8 +68,8 @@ def get_title_from_url_queue(queue, output_queue):
 
 def write_to_disk(output_queue):
     title_id = {}
-    res_file = "../data/thresh_titles-100to199"
-    wfd = open(res_file, 'w')
+    res_file = "../data/thresh_titles-0701"
+    wfd = open(res_file, 'a')
 
     while True:
         msg = output_queue.get(True)
@@ -84,7 +85,7 @@ def write_to_disk(output_queue):
 
 
 if __name__ == "__main__":
-    domain_list = open('../data/part-100to199')
+    domain_list = open('../data/all_0701')
     #domain_regex = r"^(http|https)://[^/=?]*(sina.com|sohu.com|163.com|ifeng.com)"
 
     crawl_scale = 53227135
@@ -92,17 +93,17 @@ if __name__ == "__main__":
     pv_thresh = 14
     uv_thresh = 5
 
-    url_generator = ( urllib2.unquote(json.loads(domain_item)['prev_url'].strip()) for domain_item in domain_list if json.loads(domain_item)['prev_uv'] >= uv_thresh and json.loads(domain_item)['prev_pv'] >= pv_thresh)
+    url_generator = ( urllib2.unquote(json.loads(domain_item)['url'].strip()) for domain_item in domain_list if json.loads(domain_item)['uv'] >= uv_thresh and json.loads(domain_item)['pv'] >= pv_thresh)
 
-    the_queue = Queue(maxsize=512)
-    output_queue = Queue(maxsize=51200)
-    thread_num = 512
+    the_queue = Queue(maxsize=51200)
+    output_queue = Queue(maxsize=5120)
+    thread_num = 256
 
     #job_handler = partial(get_title_from_url)
     #res_title = []
     index = 1
     p = Pool(thread_num, get_title_from_url_queue, (the_queue, output_queue))
-    wp = Pool(1, write_to_disk, (output_queue, ))
+    thread.start_new_thread(write_to_disk, (output_queue, ))
 
     while True:
         try:
@@ -125,27 +126,9 @@ if __name__ == "__main__":
             print "other exception ocurred %s"  % str(err)
             continue
 
-    #while not the_queue.empty() or not output_queue.empty():
-    #    time.sleep(60)
-
-        #finally:
-            #start_urls = [ url for url in start_urls if re.search(domain_regex, url) ]
-            #res = multi_thread(get_title_from_url, start_urls, 32)
-            #res = p.map(job_handler, start_urls)
-            #tmp = [title for title in res if title != ""]
-            #res_title = list(set(res_title + tmp))
-
-
-    #res_file = "../data/crawled_titles-100to199"
-    #res_title = list(set([title for title in output_queue]))
-
-
     p.close()
     p.join()
-
     output_queue.put(POISON_PILL)
 
-    wp.close()
-    wp.join()
     domain_list.close()
 

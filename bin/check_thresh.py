@@ -2,7 +2,7 @@ import json
 import pandas as pd
 
 
-log_path = "../data/part-00001"
+log_path = "../data/all_0701"
 
 fd = open(log_path)
 
