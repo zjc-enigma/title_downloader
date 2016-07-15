@@ -27,6 +27,54 @@ def multi_thread(handler, job_list, thread_num):
 
 
 
+def get_anchor_text(url):
+
+    url = myutils.add_url_header(url)
+
+    send_headers = {
+            'User-Agent':'Mozilla/6.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.6) Gecko/20091201 Firefox/3.5.6'
+        }
+    try:
+        req = urllib2.Request(url, headers=send_headers)
+        content = urllib2.urlopen(req, timeout=10).read()
+        content = BeautifulSoup(content, "lxml")
+        #body = content.body.get_text()
+        anchors = content.findAll('a')
+        anchor_text_list = []
+        for anchor in anchors:
+            if anchor.has_key('href'):
+                anchor_text = anchor.get_text()
+                print "GET ANCHOR %s " % anchor_text
+                if len(anchor_text) > 8:
+                    anchor_text_list.append(anchor_text)
+
+        # TODO: body extraction will got a lot of html tags , this is bad
+        #return json.dumps({"title":title, "body":body, "url":url})
+        #return {"url": url, "title": title}
+        return anchor_text_list
+
+    except Exception, e:
+        print "NONE TITLE %s " % url
+        print "exception %s" % str(e)
+        return ""
+
+
+
+def get_anchor_from_url_queue(queue, output_queue):
+
+    while True:
+        aim_url = queue.get(True)
+        if aim_url == POISON_PILL:
+            break
+
+        ret = get_anchor_text(aim_url)
+        for item in ret:
+            output_queue.put(item.encode('utf8'))
+
+    queue.put(POISON_PILL)
+
+
+
 def get_title_from_url(url):
 
     url = myutils.add_url_header(url)
@@ -49,7 +97,9 @@ def get_title_from_url(url):
 
     except Exception, e:
         print "NONE TITLE %s " % url
+        print "exception %s" % str(e)
         return ""
+
 
 
 def get_title_from_url_queue(queue, output_queue):
@@ -68,7 +118,7 @@ def get_title_from_url_queue(queue, output_queue):
 
 def write_to_disk(output_queue):
     title_id = {}
-    res_file = "../data/thresh_titles-0701"
+    res_file = "../data/thresh_titles-0701_anchor"
     wfd = open(res_file, 'a')
 
     while True:
@@ -97,12 +147,13 @@ if __name__ == "__main__":
 
     the_queue = Queue(maxsize=51200)
     output_queue = Queue(maxsize=5120)
-    thread_num = 256
+    thread_num = 128
 
     #job_handler = partial(get_title_from_url)
     #res_title = []
     index = 1
-    p = Pool(thread_num, get_title_from_url_queue, (the_queue, output_queue))
+    #p = Pool(thread_num, get_title_from_url_queue, (the_queue, output_queue))
+    p = Pool(thread_num, get_anchor_from_url_queue, (the_queue, output_queue))
     thread.start_new_thread(write_to_disk, (output_queue, ))
 
     while True:
