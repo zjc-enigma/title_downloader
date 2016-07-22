@@ -12,10 +12,19 @@ import urllib2
 import urlparse
 from bs4 import BeautifulSoup
 sys.path.append("..")
-from utils import myutils
-myutils.set_ipython_encoding_utf8()
+set_ipython_encoding_utf8()
 begin = False
 POISON_PILL = "POISON_END_PROCESSING"
+
+def set_ipython_encoding_utf8():
+    '''
+    for some reasons , ipython always take ascii as default encoding
+    use this function set it to utf8
+    '''
+    import sys
+    reload(sys)
+    sys.setdefaultencoding('UTF8')
+
 
 def multi_thread(handler, job_list, thread_num):
     p = Pool(thread_num)
@@ -25,11 +34,20 @@ def multi_thread(handler, job_list, thread_num):
     return p.map(job_handler, job_list)
 
 
+def add_url_header(url):
+    '''
+    if url not have header, add 'http://' to it
+    else return it
+
+    '''
+    if not re.match('(?:http|ftp|https)://', url):
+        url = "http://" + url
+    return url
 
 
 def get_anchor_text(url):
 
-    url = myutils.add_url_header(url)
+    url = add_url_header(url)
 
     send_headers = {
             'User-Agent':'Mozilla/6.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.6) Gecko/20091201 Firefox/3.5.6'
@@ -77,7 +95,7 @@ def get_anchor_from_url_queue(queue, output_queue):
 
 def get_title_from_url(url):
 
-    url = myutils.add_url_header(url)
+    url = add_url_header(url)
 
     send_headers = {
             'User-Agent':'Mozilla/6.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.6) Gecko/20091201 Firefox/3.5.6'
@@ -135,6 +153,7 @@ def write_to_disk(output_queue):
 
 
 if __name__ == "__main__":
+    set_ipython_encoding_utf8()
     domain_list = open('../data/all_0701')
     #domain_regex = r"^(http|https)://[^/=?]*(sina.com|sohu.com|163.com|ifeng.com)"
 
